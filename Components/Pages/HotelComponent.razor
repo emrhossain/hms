@@ -1,0 +1,79 @@
+﻿@page "/hotel"
+@using HMS.Data
+@using HMS.Services
+@inject IHotelService hotelService
+@inject NavigationManager navigation
+
+<MudText Typo="Typo.h3" Class="text-center">Hotel</MudText>
+
+<MudGrid Class="mb-3">
+    <MudItem>
+        <MudButton StartIcon="@Icons.Material.Filled.Add" Color="Color.Info" Variant="Variant.Filled" Size="Size.Small" @onclick="AddItem">Add</MudButton>
+
+        @* <MudSpacer /> *@
+
+        <MudButton StartIcon="@Icons.Custom.FileFormats.FileExcel" Color="Color.Success" Variant="Variant.Outlined" Size="Size.Small" OnClick="ExportToExcel">Export</MudButton>
+    </MudItem>
+</MudGrid>
+
+<MudGrid Class="mb-3">
+    <MudItem lg="4">
+        <MudTextField T="string" Variant="Variant.Text" Placeholder="Name" @bind-Value="searchName" />
+    </MudItem>
+    <MudItem lg="4">
+        <MudTextField T="string" Variant="Variant.Text" Placeholder="Description" @bind-Value="searchDescription" />
+    </MudItem>
+    <MudItem lg="4">
+        <MudButton ButtonType="ButtonType.Button" StartIcon="@Icons.Material.Outlined.Search" Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Small" OnClick="SearchWithTerm">Search</MudButton>
+    </MudItem>
+</MudGrid>
+
+<MudTable Items="hotels" Hover="true" SortLabel="Sort By" Dense="true" Bordered="true" Striped="true">
+    <HeaderContent>
+        <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Hotel, object>(x=>x.Name)">Name</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<Hotel, object>(x=>x.Location)">Location</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<Hotel, object>(x=>x.Description)">Description</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<Hotel, object>(x=>x.PhoneNumber)">PhoneNumber</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<Hotel, object>(x=>x.Email)">Email</MudTableSortLabel></MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Nr">@context.Name</MudTd>
+        <MudTd DataLabel="Name">@context.Location</MudTd>
+        <MudTd DataLabel="Sign">@context.Description</MudTd>
+        <MudTd DataLabel="Position">@context.PhoneNumber</MudTd>
+        <MudTd DataLabel="Molar mass">@context.Email</MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private string searchName = string.Empty;
+    private string searchDescription = string.Empty;
+    private IEnumerable<Hotel> hotels = new List<Hotel>();
+    private async Task SearchWithTerm()
+    {
+        if (string.IsNullOrWhiteSpace(searchName))
+        {
+            hotels = await hotelService.GetHotelsAsync();
+        }
+        else
+        {
+            hotels = await hotelService.SearchHotelsWithTerm(searchName, searchDescription);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        hotels = await hotelService.GetHotelsAsync();
+    }
+
+    private async Task AddItem()
+    {
+        navigation.NavigateTo("add-hotel");
+    }
+
+    private void ExportToExcel()
+    {
+
+    }
+}

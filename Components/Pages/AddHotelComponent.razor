@@ -1,0 +1,70 @@
+﻿@page "/add-hotel"
+@using HMS.Data
+@using HMS.Services
+@inject IHotelService hotelService
+
+<MudText Typo="Typo.h3" Class="text-center">Add Hotel</MudText>
+
+<EditForm FormName="AddHotel" Model="@model" OnSubmit="OnValidSubmit">
+    <DataAnnotationsValidator />
+    <MudGrid>
+        <MudItem xs="12" sm="7">
+            <MudCard>
+                <MudCardContent>
+                    <MudTextField Label="Name" Variant="Variant.Outlined"
+                    @bind-Value="@model.Name" For="@(() => model.Name)" />
+                    <MudTextField Label="Location" Class="mt-3" Variant="Variant.Outlined"
+                    @bind-Value="@model.Location" For="@(() => model.Location)" />
+                    <MudTextField Label="Description" Class="mt-3" Variant="Variant.Outlined"
+                    @bind-Value="@model.Description" For="@(() => model.Description)" />
+                    <MudTextField Label="Phone Number" Class="mt-3" Variant="Variant.Outlined"
+                    @bind-Value="@model.PhoneNumber" For="@(() => model.PhoneNumber)" />
+                    <MudTextField Label="Email" Class="mt-3" Variant="Variant.Outlined"
+                    @bind-Value="@model.Email" For="@(() => model.Email)" />
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Secondary" Class="ml-auto">Add Hotel</MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="5">
+            <MudPaper Class="pa-4 mud-height-full">
+                <MudText Typo="Typo.subtitle2">Validation Summary</MudText>
+                @if (success)
+                {
+                    <MudText Color="Color.Success">Success</MudText>
+                }
+                else
+                {
+                    <MudText Color="@Color.Error">
+                        <ValidationSummary />
+                    </MudText>
+                }
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12">
+            <MudText Typo="Typo.body2" Align="Align.Center">
+                Fill out the form correctly to see the success message.
+            </MudText>
+        </MudItem>
+    </MudGrid>
+</EditForm>
+@code {
+    Hotel model = new Hotel();
+    bool success;
+
+    private async void OnValidSubmit(EditContext context)
+    {
+        Hotel hotel = new Hotel()
+        {
+            Name = "Test Hotel",
+            Description = "Description of the hotel",
+            Location = "Lakshmipur",
+            PhoneNumber = "0101022200"
+        };
+        await hotelService.AddHotelAsync(hotel);
+        await Task.Delay(3000);
+        success = true;
+        StateHasChanged();
+    }
+}
