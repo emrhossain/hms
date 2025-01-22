@@ -12,12 +12,6 @@ namespace HMS.Services
         {
             _dbContext = dbContext;
             Logger = logger;
-            Logger.LogInformation("HotelService created");
-        }
-
-        ~HotelService()
-        {
-            Logger.LogInformation("HotelService disposed");
         }
 
         public async Task AddHotelAsync(Hotel hotel)

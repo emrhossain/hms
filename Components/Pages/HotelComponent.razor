@@ -1,4 +1,6 @@
 ﻿@page "/hotel"
+@rendermode InteractiveServer
+@attribute [StreamRendering]
 @using HMS.Data
 @using HMS.Services
 @inject IHotelService hotelService
@@ -9,10 +11,7 @@
 <MudGrid Class="mb-3">
     <MudItem>
         <MudButton StartIcon="@Icons.Material.Filled.Add" Color="Color.Info" Variant="Variant.Filled" Size="Size.Small" @onclick="AddItem">Add</MudButton>
-
-        @* <MudSpacer /> *@
-
-        <MudButton StartIcon="@Icons.Custom.FileFormats.FileExcel" Color="Color.Success" Variant="Variant.Outlined" Size="Size.Small" OnClick="ExportToExcel">Export</MudButton>
+        <MudButton StartIcon="@Icons.Custom.FileFormats.FileExcel" Color="Color.Success" Variant="Variant.Outlined" Size="Size.Small" @onclick="ExportToExcel">Export</MudButton>
     </MudItem>
 </MudGrid>
 
@@ -24,56 +23,94 @@
         <MudTextField T="string" Variant="Variant.Text" Placeholder="Description" @bind-Value="searchDescription" />
     </MudItem>
     <MudItem lg="4">
-        <MudButton ButtonType="ButtonType.Button" StartIcon="@Icons.Material.Outlined.Search" Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Small" OnClick="SearchWithTerm">Search</MudButton>
+        <MudButton ButtonType="ButtonType.Button" StartIcon="@Icons.Material.Outlined.Search" Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Small" @onclick="SearchWithTerm">Search</MudButton>
     </MudItem>
 </MudGrid>
 
-<MudTable Items="hotels" Hover="true" SortLabel="Sort By" Dense="true" Bordered="true" Striped="true">
-    <HeaderContent>
-        <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Hotel, object>(x=>x.Name)">Name</MudTableSortLabel></MudTh>
-        <MudTh><MudTableSortLabel SortBy="new Func<Hotel, object>(x=>x.Location)">Location</MudTableSortLabel></MudTh>
-        <MudTh><MudTableSortLabel SortBy="new Func<Hotel, object>(x=>x.Description)">Description</MudTableSortLabel></MudTh>
-        <MudTh><MudTableSortLabel SortBy="new Func<Hotel, object>(x=>x.PhoneNumber)">PhoneNumber</MudTableSortLabel></MudTh>
-        <MudTh><MudTableSortLabel SortBy="new Func<Hotel, object>(x=>x.Email)">Email</MudTableSortLabel></MudTh>
-        <MudTh></MudTh>
-    </HeaderContent>
-    <RowTemplate>
-        <MudTd DataLabel="Nr">@context.Name</MudTd>
-        <MudTd DataLabel="Name">@context.Location</MudTd>
-        <MudTd DataLabel="Sign">@context.Description</MudTd>
-        <MudTd DataLabel="Position">@context.PhoneNumber</MudTd>
-        <MudTd DataLabel="Molar mass">@context.Email</MudTd>
-    </RowTemplate>
-</MudTable>
+@if (hotels == null)
+{
+    <MudText>Loading...</MudText>
+}
+else if (!hotels.Any())
+{
+    <MudText>No data available</MudText>
+}
+else
+{
+    <MudTable Items="hotels" Hover="true" SortLabel="Sort By" Dense="true" Bordered="true" Striped="true">
+        <HeaderContent>
+            <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Hotel, object>(x => x.Name)">Name</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<Hotel, object>(x => x.Location)">Location</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<Hotel, object>(x => x.Description)">Description</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<Hotel, object>(x => x.PhoneNumber)">PhoneNumber</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<Hotel, object>(x => x.Email)">Email</MudTableSortLabel></MudTh>
+            <MudTh></MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Name">@context.Name</MudTd>
+            <MudTd DataLabel="Location">@context.Location</MudTd>
+            <MudTd DataLabel="Description">@context.Description</MudTd>
+            <MudTd DataLabel="PhoneNumber">@context.PhoneNumber</MudTd>
+            <MudTd DataLabel="Email">@context.Email</MudTd>
+        </RowTemplate>
+    </MudTable>
+}
 
 @code {
     private string searchName = string.Empty;
     private string searchDescription = string.Empty;
-    private IEnumerable<Hotel> hotels = new List<Hotel>();
-    private async Task SearchWithTerm()
-    {
-        if (string.IsNullOrWhiteSpace(searchName))
-        {
-            hotels = await hotelService.GetHotelsAsync();
-        }
-        else
-        {
-            hotels = await hotelService.SearchHotelsWithTerm(searchName, searchDescription);
-        }
-    }
+    private IEnumerable<Hotel>? hotels;
 
     protected override async Task OnInitializedAsync()
     {
-        hotels = await hotelService.GetHotelsAsync();
+        try
+        {
+            await LoadHotelsAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading hotels: {ex.Message}");
+        }
     }
 
-    private async Task AddItem()
+    private async Task LoadHotelsAsync()
+    {
+        try
+        {
+            hotels = await hotelService.GetHotelsAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching hotel data: {ex.Message}");
+        }
+    }
+
+    private async Task SearchWithTerm()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(searchName) && string.IsNullOrWhiteSpace(searchDescription))
+            {
+                await LoadHotelsAsync();
+            }
+            else
+            {
+                hotels = await hotelService.SearchHotelsWithTerm(searchName, searchDescription);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error during search: {ex.Message}");
+        }
+    }
+
+    private void AddItem()
     {
         navigation.NavigateTo("add-hotel");
     }
 
     private void ExportToExcel()
     {
-
+        // Implement your export logic here
     }
 }

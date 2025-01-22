@@ -21,14 +21,14 @@ builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuth
 builder.Services.AddMudServices();
 
 builder.Services.AddAuthentication(options =>
-    {
-        options.DefaultScheme = IdentityConstants.ApplicationScheme;
-        options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
-    })
-    .AddIdentityCookies();
+{
+    options.DefaultScheme = IdentityConstants.ApplicationScheme;
+    options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+})
+.AddIdentityCookies();
 
-builder.Services.AddScoped<IHotelService, HotelService>();
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+                      ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
@@ -40,7 +40,14 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
     .AddDefaultTokenProviders();
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+builder.Services.AddScoped<IHotelService, HotelService>();
 
+// Add SignalR with custom keep-alive and timeout intervals
+builder.Services.AddSignalR(options =>
+{
+    options.KeepAliveInterval = TimeSpan.FromMinutes(5); // Adjust as needed
+    options.ClientTimeoutInterval = TimeSpan.FromMinutes(6); // Slightly higher than KeepAliveInterval
+});
 
 var app = builder.Build();
 
@@ -52,12 +59,10 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
-
 
 app.UseAntiforgery();
 
@@ -68,11 +73,15 @@ app.MapRazorComponents<App>()
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
 
+// Monitor and seed initial data
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     await ApplicationDbInitializer.SeedRolesAsync(services);
     await ApplicationDbInitializer.SeedDefaultUserAsync(services);
 }
+
+// Handle SignalR connections if needed
+//app.MapHub<YourHub>("/yourhub"); // Replace "YourHub" with your actual SignalR hub class
 
 app.Run();

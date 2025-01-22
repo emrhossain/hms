@@ -5,6 +5,10 @@ VisualStudioVersion = 17.13.35617.110
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HMS", "HMS.csproj", "{5CC02574-E911-487F-8C8D-880446D4D4F0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HRS", "..\HRS\HRS\HRS.csproj", "{D595ABAB-49C0-4ED9-864F-CA7CD9FAD047}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HRS.Client", "..\HRS\HRS.Client\HRS.Client.csproj", "{38130B86-7364-4159-8077-9DB87325FC65}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +19,14 @@ Global
 		{5CC02574-E911-487F-8C8D-880446D4D4F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5CC02574-E911-487F-8C8D-880446D4D4F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5CC02574-E911-487F-8C8D-880446D4D4F0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D595ABAB-49C0-4ED9-864F-CA7CD9FAD047}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D595ABAB-49C0-4ED9-864F-CA7CD9FAD047}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D595ABAB-49C0-4ED9-864F-CA7CD9FAD047}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D595ABAB-49C0-4ED9-864F-CA7CD9FAD047}.Release|Any CPU.Build.0 = Release|Any CPU
+		{38130B86-7364-4159-8077-9DB87325FC65}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{38130B86-7364-4159-8077-9DB87325FC65}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{38130B86-7364-4159-8077-9DB87325FC65}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{38130B86-7364-4159-8077-9DB87325FC65}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,11 +1,12 @@
 ﻿@page "/add-hotel"
+@rendermode InteractiveServer
 @using HMS.Data
 @using HMS.Services
 @inject IHotelService hotelService
 
 <MudText Typo="Typo.h3" Class="text-center">Add Hotel</MudText>
 
-<EditForm FormName="AddHotel" Model="@model" OnSubmit="OnValidSubmit">
+<EditForm FormName="AddHotel" Model="@model" OnValidSubmit="OnValidSubmit">
     <DataAnnotationsValidator />
     <MudGrid>
         <MudItem xs="12" sm="7">
@@ -55,14 +56,14 @@
 
     private async void OnValidSubmit(EditContext context)
     {
-        Hotel hotel = new Hotel()
-        {
-            Name = "Test Hotel",
-            Description = "Description of the hotel",
-            Location = "Lakshmipur",
-            PhoneNumber = "0101022200"
-        };
-        await hotelService.AddHotelAsync(hotel);
+        // Hotel hotel = new Hotel()
+        // {
+        //     Name = "Test Hotel",
+        //     Description = "Description of the hotel",
+        //     Location = "Lakshmipur",
+        //     PhoneNumber = "0101022200"
+        // };
+        await hotelService.AddHotelAsync(model);
         await Task.Delay(3000);
         success = true;
         StateHasChanged();
