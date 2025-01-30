@@ -7,7 +7,7 @@
         public decimal AmountPaid { get; set; }
         public DateTime PaymentDate { get; set; }
         public string PaymentStatus { get; set; }
-        public DateTime LastModified_21180040 { get; set; }
+        public DateTime LastModified_21180040 { get; set; } = DateTime.Now;
         public Reservation Reservation { get; set; }
     }
 }

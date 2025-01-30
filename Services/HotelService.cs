@@ -14,20 +14,22 @@ namespace HMS.Services
             Logger = logger;
         }
 
-        public async Task AddHotelAsync(Hotel hotel)
+        public async Task<Hotel?> AddHotelAsync(Hotel hotel)
         {
             try
             {
-                await _dbContext.Hotels.AddAsync(hotel);
+                var savedHotel = await _dbContext.Hotels.AddAsync(hotel);
                 await _dbContext.SaveChangesAsync();
+                return savedHotel.Entity;
             }
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Error saving hotel");
+                return null;
             }
         }
 
-        public async Task DeleteHotelAsync(int id)
+        public async Task<bool> DeleteHotelAsync(int id)
         {
             try
             {
@@ -35,12 +37,14 @@ namespace HMS.Services
                 if (existingHotel != null)
                 {
                     _dbContext.Hotels.Remove(existingHotel);
-                    await _dbContext.SaveChangesAsync();
+                    return await _dbContext.SaveChangesAsync() > 0;
                 }
+                return false;
             }
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Error deleting hotel");
+                return false;
             }
         }
 
@@ -66,7 +70,7 @@ namespace HMS.Services
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Error getting hotels");
-                return default;
+                return new List<Hotel>();
             }
         }
 
@@ -75,17 +79,19 @@ namespace HMS.Services
             try
             {
                 return await _dbContext.Hotels
-                                       .Where(h => h.Name.Contains(searchTerm1, StringComparison.OrdinalIgnoreCase) && h.Description.Contains(searchTerm2, StringComparison.OrdinalIgnoreCase))
-                                       .ToListAsync();
+                    .Where(h =>
+                        EF.Functions.Like(h.Name, $"%{searchTerm1}%") &&
+                        EF.Functions.Like(h.Description, $"%{searchTerm2}%"))
+                    .ToListAsync();
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error searching hotel");
-                return default;
+                Logger.LogError(ex, "Error searching hotels with terms: {SearchTerm1}, {SearchTerm2}", searchTerm1, searchTerm2);
+                return Enumerable.Empty<Hotel>();
             }
         }
 
-        public async Task UpdateHotelAsync(Hotel hotel)
+        public async Task<bool> UpdateHotelAsync(Hotel hotel)
         {
             try
             {
@@ -97,14 +103,17 @@ namespace HMS.Services
                     existingHotel.Location = hotel.Location;
                     existingHotel.Email = hotel.Email;
                     existingHotel.PhoneNumber = hotel.PhoneNumber;
+                    existingHotel.LastModified_21180040 = DateTime.Now;
 
                     _dbContext.Hotels.Update(existingHotel);
-                    await _dbContext.SaveChangesAsync();
+                    return await _dbContext.SaveChangesAsync() > 0;
                 }
+                return false;
             }
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Error updating hotel");
+                return false;
             }
         }
     }

@@ -6,9 +6,9 @@ namespace HMS.Services
     {
         Task<IEnumerable<Hotel>?> GetHotelsAsync();
         Task<Hotel?> GetHotelByIdAsync(int id);
-        Task AddHotelAsync(Hotel hotel);
-        Task UpdateHotelAsync(Hotel hotel);
-        Task DeleteHotelAsync(int id);
+        Task<Hotel?> AddHotelAsync(Hotel hotel);
+        Task<bool> UpdateHotelAsync(Hotel hotel);
+        Task<bool> DeleteHotelAsync(int id);
         Task<IEnumerable<Hotel>?> SearchHotelsWithTerm(string searchTerm1, string searchTerm2);
 
     }

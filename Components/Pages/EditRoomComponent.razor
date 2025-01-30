@@ -1,0 +1,122 @@
+﻿@page "/room/edit/{RoomId}"
+@rendermode InteractiveServer
+@using HMS.Data
+@using HMS.Services
+@inject IRoomService roomService
+@inject IHotelService hotelService
+@inject NavigationManager navigation
+
+<h3 Class="text-center">Add Room</h3>
+
+<button Class="ml-auto mt-3 btn btn-sm btn-link" @onclick="GoToList">Room List</button>
+
+<EditForm FormName="EditRoom" Model="model" OnValidSubmit="OnValidSubmit">
+    <DataAnnotationsValidator />
+    <div class="row">
+        <div class="col">
+            <label for="hotelSelect" class="mt-3">Select Hotel</label>
+            <select id="hotelSelect" class="form-control" @bind="model.HotelId">
+                <option value="">-- Select Hotel --</option>
+                @if (hotels != null)
+                {
+                    @foreach (var hotel in hotels)
+                    {
+                        <option value="@hotel.HotelId">@hotel.Name</option>
+                    }
+                }
+            </select>
+            <ValidationMessage For="@(() => model.HotelId)" />
+
+            <label for="roomTypeSelect" class="mt-3">Room Type</label>
+            <select id="roomTypeSelect" class="form-control" @bind="model.RoomType">
+                <option value="">-- Select Room Type --</option>
+                <option value="Single">Single</option>
+                <option value="Double">Double</option>
+                <option value="Suite">Suite</option>
+                <option value="Deluxe">Deluxe</option>
+            </select>
+            <ValidationMessage For="@(() => model.RoomType)" />
+
+            <InputText Placeholder="Room Number" Class="form-control mt-3" @bind-Value="@model.RoomNumber" For="@(() => model.RoomNumber)" />
+            <ValidationMessage For="@(() => model.RoomNumber)" />
+
+            <label for="pricePerNight" class="mt-3">Price Per Night</label>
+            <InputNumber @bind-Value="@model.PricePerNight" id="pricePerNight" Class="form-control mt-3" />
+            <ValidationMessage For="@(() => model.PricePerNight)" />
+
+            <div class="form-check mt-3">
+                <InputCheckbox Class="form-check-input" @bind-Value="@model.IsAvailable" />
+                <label class="form-check-label">Is Available</label>
+            </div>
+
+            @if (success)
+            {
+                <div class="text-success success-message">Room updated successfully!</div>
+            }
+
+            <button type="submit" Class="ml-auto mt-3 btn btn-sm btn-outline-primary">Save</button>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    Room model = new Room();
+    [Parameter] public string? RoomId { get; set; }
+    bool success;
+    IEnumerable<Hotel> hotels = new List<Hotel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrWhiteSpace(RoomId) || !int.TryParse(RoomId, out int id))
+        {
+            GoToList();
+        }
+        else
+        {
+            var existingHotel = await roomService.GetRoomByIdAsync(id);
+            if (existingHotel != null)
+            {
+                model = existingHotel;
+                StateHasChanged();
+            }
+            else
+            {
+                GoToList();
+            }
+        }
+        await LoadHotelsAsync();
+    }
+
+    private async Task LoadHotelsAsync()
+    {
+        try
+        {
+            hotels = await hotelService.GetHotelsAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading hotels: {ex.Message}");
+        }
+    }
+
+    private async void OnValidSubmit(EditContext context)
+    {
+        success = false; // Reset success before each submission
+        var updated = await roomService.UpdateRoomAsync(model);
+        if (updated)
+        {
+            success = true;
+            StateHasChanged();
+            await Task.Delay(2000); // Wait for 2 seconds
+            GoToList(); // return to list after 2 seconds
+        }
+
+        StateHasChanged();
+    }
+
+    private void GoToList()
+    {
+        navigation.NavigateTo("room");
+    }
+
+}

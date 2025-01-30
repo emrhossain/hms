@@ -1,0 +1,156 @@
+﻿@page "/add-reservation"
+@rendermode InteractiveServer
+@using HMS.Services
+@using HMS.Data
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@inject IReservationService reservationService
+@inject IRoomService roomService
+@inject IHotelService hotelService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager navigation
+@attribute [Authorize]
+
+<h3 Class="text-center">Add Reservation</h3>
+
+<button Class="ml-auto mt-3 btn btn-sm btn-link" @onclick="GoToList">Back to list</button>
+
+<EditForm Model="@reservation" FormName="AddReservation" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label>Hotel</label>
+        <InputSelect TValue="int" Value="@selectedHotelId" ValueExpression="() => selectedHotelId" class="form-control" ValueChanged="OnHotelChange">
+            <option value="">Select a Hotel</option>
+            @foreach (var hotel in hotels)
+            {
+                <option value="@hotel.HotelId">@hotel.Name</option>
+            }
+        </InputSelect>
+    </div>
+    <div class="form-group">
+        <label>Room</label>
+        <InputSelect TValue="int" Value="@reservation.RoomId" ValueExpression="() => reservation.RoomId" class="form-control" ValueChanged="OnRoomChange">
+            <option value="">Select a Room</option>
+            @foreach (var room in rooms)
+            {
+                <option value="@room.RoomId">@room.RoomNumber</option>
+            }
+        </InputSelect>
+    </div>
+    <div class="form-group">
+        <label>Check-In Date</label>
+        <InputDate TValue="DateTime" Value="@reservation.CheckInDate" ValueExpression="(() => reservation.CheckInDate)" class="form-control" ValueChanged="CheckInDateChange" />
+    </div>
+    <div class="form-group">
+        <label>Check-Out Date</label>
+        <InputDate TValue="DateTime" Value="@reservation.CheckOutDate" ValueExpression="(() => reservation.CheckOutDate)" class="form-control" ValueChanged="CheckOutDateChange" />
+
+    </div>
+    <div class="form-group">
+        <label>Total Price</label>
+        <InputNumber @bind-Value="@reservation.TotalPrice" class="form-control" readonly />
+    </div>
+
+    @if (success)
+    {
+        <div class="text-success success-message">Reservation added successfully!</div>
+    }
+
+    <button type="submit" class="btn btn-primary">Save</button>
+</EditForm>
+
+@code {
+    private Reservation reservation = new();
+    private IEnumerable<Hotel> hotels = new List<Hotel>();
+    private IEnumerable<Room> rooms = new List<Room>();
+    private int selectedHotelId;
+    private string userId;
+    private bool success;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get the logged-in user ID on initialization
+        await SetLoggedInUser();
+        hotels = await hotelService.GetHotelsAsync();
+    }
+
+    private async Task SetLoggedInUser()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity != null && user.Identity.IsAuthenticated)
+        {
+            // Extract the user ID claim (adjust the claim type based on your setup, e.g., "sub", "id", etc.)
+            userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            // Assign the user ID to the reservation
+            reservation.UserId = userId;
+        }
+    }
+
+    private async Task OnHotelChange(int value)
+    {
+        selectedHotelId = value;
+        rooms = await roomService.GetRoomsByHotelIdAsync(selectedHotelId);
+        reservation.RoomId = 0; // Reset room selection
+    }
+
+    private async Task OnRoomChange(int value)
+    {
+        reservation.RoomId = value;
+        var room = rooms.FirstOrDefault(r => r.RoomId == reservation.RoomId);
+        if (room != null)
+        {
+            reservation.TotalPrice = CalculatePrice(room.PricePerNight);
+        }
+    }
+
+    private void CheckInDateChange(DateTime value)
+    {
+        reservation.CheckInDate = value;
+        CalculateTotalPrice();
+    }
+    private void CheckOutDateChange(DateTime value)
+    {
+        reservation.CheckOutDate = value;
+        CalculateTotalPrice();
+    }
+
+    private void CalculateTotalPrice()
+    {
+        var room = rooms.FirstOrDefault(r => r.RoomId == reservation.RoomId);
+        if (room != null && reservation.CheckInDate != default && reservation.CheckOutDate != default)
+        {
+            var days = (reservation.CheckOutDate - reservation.CheckInDate).Days + 1;
+            reservation.TotalPrice = days > 0 ? room.PricePerNight * days : 0;
+        }
+    }
+
+    private decimal CalculatePrice(decimal pricePerNight)
+    {
+        var nights = (reservation.CheckOutDate - reservation.CheckInDate).Days + 1;
+        return nights > 0 ? nights * pricePerNight : 0;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        success = false; // Reset success before each submission
+
+        if (await reservationService.AddReservationAsync(reservation))
+        {
+            success = true;
+            StateHasChanged();
+            await Task.Delay(2000); // Wait for 2 seconds
+            GoToList();
+        }
+        StateHasChanged();
+    }
+
+    private void GoToList()
+    {
+        navigation.NavigateTo("/reservations");
+    }
+}

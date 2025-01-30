@@ -1,0 +1,184 @@
+﻿@page "/reservations"
+@using HMS.Data
+@using HMS.Services
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using OfficeOpenXml
+@rendermode InteractiveServer
+@inject IReservationService reservationService
+@inject NavigationManager navigation
+@inject IJSRuntime jsRuntime
+@inject ILogger<ReservationComponent> logger
+@attribute [Authorize]
+
+<h4 Class="text-center">Reservations</h4>
+<hr />
+
+<div Class="row mb-3">
+    <div class="col">
+        <button class="btn btn-sm btn-outline-info" @onclick="AddReservation">Add Reservation</button>
+        <button class="btn btn-sm btn-outline-success" @onclick="ExportToExcel">Export</button>
+    </div>
+</div>
+
+<div Class="row mb-3">
+    <div class="col-auto">
+        <InputText class="form-control" Placeholder="Hotel" @bind-Value="searchHotel" />
+    </div>
+    <div class="col-auto">
+        <InputText class="form-control" Placeholder="Room Type" @bind-Value="searchRoom" />
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-outline-primary mb-3" @onclick="SearchWithTerm">Search</button>
+    </div>
+</div>
+
+@if (reservations == null)
+{
+    <div>Loading...</div>
+}
+else if (!reservations.Any())
+{
+    <div>No reservations available</div>
+}
+else
+{
+    <QuickGrid Items="reservations" Pagination="pagination" Class="table table-responsive table-bordered table-striped">
+        <PropertyColumn Property="@(p => p.User.Email)" Sortable="true" Title="User" />
+        <PropertyColumn Property="@(p => p.Room.Hotel.Name)" Sortable="true" Title="Hotel" />
+        <PropertyColumn Property="@(p => p.Room.RoomNumber)" Sortable="true" Title="Room" />
+        <PropertyColumn Property="@(p => p.Room.RoomType)" Sortable="true" Title="Type" />
+        <PropertyColumn Property="@(p => p.CheckInDate.ToString("yyyy-MM-dd"))" Sortable="true" Title="Check In" />
+        <PropertyColumn Property="@(p => p.CheckOutDate.ToString("yyyy-MM-dd"))" Sortable="true" Title="Check Out" />
+        <PropertyColumn Property="@(p => p.TotalPrice)" Sortable="true" Align="Align.Right" Title="Total" />
+        <TemplateColumn Title="Actions">
+            <button class="btn btn-sm btn-link" @onclick="@(() => EditReservation(context.ReservationId))"><i class="bi bi-pencil"></i></button>
+            <button class="btn btn-sm btn-link" @onclick="@(() => DeleteReservation(context))"><i class="bi bi-trash"></i></button>
+        </TemplateColumn>
+    </QuickGrid>
+    <Paginator State="pagination" />
+}
+
+@code {
+    private IQueryable<Reservation> reservations;
+    PaginationState pagination = new PaginationState { ItemsPerPage = 10 };
+    private string searchHotel = string.Empty;
+    private string searchRoom = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadReservation();
+    }
+
+    private async Task LoadReservation()
+    {
+        try
+        {
+            var result = await reservationService.GetReservationsAsync();
+            reservations = result.AsQueryable();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Error loading reservations: {ex.Message}");
+        }
+    }
+
+    private void AddReservation()
+    {
+        navigation.NavigateTo("/add-reservation");
+    }
+
+    private async Task ExportToExcel()
+    {
+        try
+        {
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial; // Set license context
+            using var package = new OfficeOpenXml.ExcelPackage();
+            var worksheet = package.Workbook.Worksheets.Add("Reservations");
+
+            // Add headers
+            worksheet.Cells[1, 1].Value = "SL";
+            worksheet.Cells[1, 2].Value = "User";
+            worksheet.Cells[1, 3].Value = "Hotel";
+            worksheet.Cells[1, 4].Value = "Room";
+            worksheet.Cells[1, 5].Value = "Type";
+            worksheet.Cells[1, 6].Value = "Check-In Date";
+            worksheet.Cells[1, 7].Value = "Check-Out Date";
+            worksheet.Cells[1, 8].Value = "Total Price";
+
+            // Populate data
+            var reservationList = reservations.ToList();
+            for (int i = 0; i < reservationList.Count; i++)
+            {
+                worksheet.Cells[i + 2, 1].Value = (i + 1);
+                worksheet.Cells[i + 2, 2].Value = reservationList[i].User?.Email;
+                worksheet.Cells[i + 2, 3].Value = reservationList[i].Room?.Hotel.Name;
+                worksheet.Cells[i + 2, 4].Value = reservationList[i].Room?.RoomNumber;
+                worksheet.Cells[i + 2, 5].Value = reservationList[i].Room?.RoomType;
+                worksheet.Cells[i + 2, 6].Value = reservationList[i].CheckInDate.ToString("yyyy-MM-dd");
+                worksheet.Cells[i + 2, 7].Value = reservationList[i].CheckOutDate.ToString("yyyy-MM-dd");
+                worksheet.Cells[i + 2, 8].Value = reservationList[i].TotalPrice;
+            }
+
+            // Convert to bytes and trigger download
+            var excelBytes = package.GetAsByteArray();
+            var fileName = "Reservations.xlsx";
+            await using var stream = new MemoryStream(excelBytes);
+
+            using var streamRef = new Microsoft.JSInterop.DotNetStreamReference(stream);
+
+            await jsRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Error exporting reservations: {ex.Message}");
+        }
+        
+    }
+
+    private void EditReservation(int id)
+    {
+        navigation.NavigateTo($"/reservation/edit/{id}");
+    }
+
+    private async Task DeleteReservation(Reservation reservation)
+    {
+        try
+        {
+            var confirmed = await jsRuntime.InvokeAsync<bool>("confirm", new object[] { $"Are you sure you want to delete this reservation: '{reservation.ReservationId}'?" });
+            if (confirmed)
+            {
+                if (await reservationService.DeleteReservationAsync(reservation.ReservationId))
+                {
+                    var result = await reservationService.GetReservationsAsync();
+                    reservations = result.AsQueryable();
+                    StateHasChanged();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Error deleting reservation: {ex.Message}");
+        }
+    }
+
+    private async Task SearchWithTerm()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(searchHotel) && string.IsNullOrWhiteSpace(searchRoom))
+            {
+                await LoadReservation();
+            }
+            else
+            {
+                var filteredReservations = await reservationService.SearchReservationAsync(searchHotel, searchRoom);
+                reservations = filteredReservations.AsQueryable();
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Error during search: {ex.Message}");
+        }
+    }
+}

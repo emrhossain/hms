@@ -30,6 +30,67 @@ namespace HMS.Data
                 .HasPrecision(18, 2);
 
         }
+
+        public override int SaveChanges()
+        {
+            var logEntries = new List<Log_21180040>();
+
+            foreach (var entry in ChangeTracker.Entries())
+            {
+                if (entry.State == EntityState.Added || entry.State == EntityState.Modified || entry.State == EntityState.Deleted)
+                {
+                    logEntries.Add(new Log_21180040
+                    {
+                        TableName = entry.Metadata.GetTableName(),
+                        TypeOfOperation = entry.State.ToString(),
+                        OperationTime = DateTime.UtcNow
+                    });
+                }
+            }
+
+            // Save actual entity changes first
+            var result = base.SaveChanges();
+
+            // Insert logs separately to avoid modifying the tracked entities during iteration
+            if (logEntries.Any())
+            {
+                Log_21180040.AddRange(logEntries);
+                base.SaveChanges();
+            }
+
+            return result;
+        }
+
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            var logEntries = new List<Log_21180040>();
+
+            foreach (var entry in ChangeTracker.Entries())
+            {
+                if (entry.State == EntityState.Added || entry.State == EntityState.Modified || entry.State == EntityState.Deleted)
+                {
+                    logEntries.Add(new Log_21180040
+                    {
+                        TableName = entry.Metadata.GetTableName(),
+                        TypeOfOperation = entry.State.ToString(),
+                        OperationTime = DateTime.UtcNow
+                    });
+                }
+            }
+
+            // Save actual entity changes first
+            var result = await base.SaveChangesAsync(cancellationToken);
+
+            // Insert logs separately to avoid modifying the tracked entities during iteration
+            if (logEntries.Any())
+            {
+                Log_21180040.AddRange(logEntries);
+                await base.SaveChangesAsync(cancellationToken);
+            }
+
+            return result;
+        }
+
     }
 
 }

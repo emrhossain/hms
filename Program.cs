@@ -5,7 +5,7 @@ using HMS.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using MudBlazor.Services;
+//using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,7 +18,6 @@ builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
-builder.Services.AddMudServices();
 
 builder.Services.AddAuthentication(options =>
 {
@@ -41,13 +40,11 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 builder.Services.AddScoped<IHotelService, HotelService>();
+builder.Services.AddScoped<IRoomService, RoomService>();
+builder.Services.AddScoped<IReservationService, ReservationService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 
-// Add SignalR with custom keep-alive and timeout intervals
-builder.Services.AddSignalR(options =>
-{
-    options.KeepAliveInterval = TimeSpan.FromMinutes(5); // Adjust as needed
-    options.ClientTimeoutInterval = TimeSpan.FromMinutes(6); // Slightly higher than KeepAliveInterval
-});
+//builder.Services.AddMudServices();
 
 var app = builder.Build();
 

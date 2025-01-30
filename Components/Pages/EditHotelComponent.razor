@@ -1,17 +1,15 @@
-﻿@page "/add-hotel"
+﻿@page "/hotel/edit/{HotelId}"
 @rendermode InteractiveServer
 @using HMS.Data
 @using HMS.Services
-@using Microsoft.AspNetCore.Authorization
 @inject IHotelService hotelService
 @inject NavigationManager navigation
-@attribute [Authorize]
 
-<h3 Class="text-center">Add Hotel</h3>
+<h3 Class="text-center">Edit Hotel</h3>
 
 <button Class="ml-auto mt-3 btn btn-sm btn-link" @onclick="GoToList">Hotel List</button>
 
-<EditForm EditContext="@editContext" OnValidSubmit="OnValidSubmit">
+<EditForm FormName="EditHotel" Model="model" OnValidSubmit="OnValidSubmit">
     <DataAnnotationsValidator />
     <div class="row">
         <div class="col">
@@ -23,35 +21,52 @@
 
             @if (success)
             {
-                <div class="text-success success-message">Hotel added successfully!</div>
+                <div class="text-success success-message">Hotel updated successfully!</div>
             }
 
             <div class="text-danger">
                 <ValidationSummary />
             </div>
-            <button type="submit" Class="ml-auto mt-3 btn btn-sm btn-outline-primary">Add Hotel</button>
+            <button type="submit" Class="ml-auto mt-3 btn btn-sm btn-outline-primary">Save</button>
         </div>
     </div>
 </EditForm>
 @code {
     Hotel model = new Hotel();
-
-    EditContext editContext;
+    [Parameter] public string? HotelId { get; set; }
 
     bool success;
 
-    protected override void OnInitialized()
+    protected override async void OnInitialized()
     {
-        editContext = new EditContext(model);
+        if (string.IsNullOrWhiteSpace(HotelId) || !int.TryParse(HotelId, out int id))
+        {
+            GoToList();
+        }
+        else
+        {
+            var existingHotel = await hotelService.GetHotelByIdAsync(id);
+            if (existingHotel != null)
+            {
+                model = existingHotel;
+                StateHasChanged();
+            }
+            else
+            {
+                GoToList();
+            }
+        }
     }
-    private async void OnValidSubmit(EditContext context)
+    private async void OnValidSubmit()
     {
         success = false; // Reset success before each submission
-        var result = await hotelService.AddHotelAsync(model);
-        if (result != null)
+        var updated = await hotelService.UpdateHotelAsync(model);
+        if (updated)
         {
             success = true;
-            ResetForm(); // Reset the form
+            StateHasChanged();
+            await Task.Delay(2000); // Wait for 2 seconds
+            GoToList(); // return to list after 2 seconds
         }
 
         StateHasChanged();
@@ -62,12 +77,4 @@
         navigation.NavigateTo("hotel");
     }
 
-    private async Task ResetForm()
-    {
-        model = new Hotel();
-        editContext = new EditContext(model); // Create a new EditContext
-        await Task.Delay(3000); // Wait for 3 seconds
-        success = false; // Reset success after 3 seconds
-        StateHasChanged();
-    }
 }
