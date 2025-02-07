@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace HMS.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250123235537_modelValidation")]
-    partial class modelValidation
+    [Migration("20250207211046_CustomerIdSelection")]
+    partial class CustomerIdSelection
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -90,26 +90,20 @@ namespace HMS.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("HMS.Data.Hotel", b =>
+            modelBuilder.Entity("HMS.Data.Customer", b =>
                 {
-                    b.Property<int>("HotelId")
+                    b.Property<int>("CustomerId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("HotelId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CustomerId"));
 
-                    b.Property<string>("Description")
+                    b.Property<string>("Address")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("LastModified_21180040")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Location")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -121,9 +115,9 @@ namespace HMS.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("HotelId");
+                    b.HasKey("CustomerId");
 
-                    b.ToTable("Hotels");
+                    b.ToTable("Customers");
                 });
 
             modelBuilder.Entity("HMS.Data.Log_21180040", b =>
@@ -150,38 +144,6 @@ namespace HMS.Migrations
                     b.ToTable("Log_21180040");
                 });
 
-            modelBuilder.Entity("HMS.Data.Payment", b =>
-                {
-                    b.Property<int>("PaymentId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PaymentId"));
-
-                    b.Property<decimal>("AmountPaid")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("LastModified_21180040")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("PaymentDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("PaymentStatus")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("ReservationId")
-                        .HasColumnType("int");
-
-                    b.HasKey("PaymentId");
-
-                    b.HasIndex("ReservationId");
-
-                    b.ToTable("Payments");
-                });
-
             modelBuilder.Entity("HMS.Data.Reservation", b =>
                 {
                     b.Property<int>("ReservationId")
@@ -195,6 +157,12 @@ namespace HMS.Migrations
 
                     b.Property<DateTime>("CheckOutDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsPaid")
+                        .HasColumnType("bit");
 
                     b.Property<DateTime>("LastModified_21180040")
                         .HasColumnType("datetime2");
@@ -212,6 +180,8 @@ namespace HMS.Migrations
 
                     b.HasKey("ReservationId");
 
+                    b.HasIndex("CustomerId");
+
                     b.HasIndex("RoomId");
 
                     b.HasIndex("UserId");
@@ -227,9 +197,6 @@ namespace HMS.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RoomId"));
 
-                    b.Property<int>("HotelId")
-                        .HasColumnType("int");
-
                     b.Property<bool>("IsAvailable")
                         .HasColumnType("bit");
 
@@ -242,17 +209,12 @@ namespace HMS.Migrations
 
                     b.Property<string>("RoomNumber")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("RoomType")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                    b.Property<int>("RoomType")
+                        .HasColumnType("int");
 
                     b.HasKey("RoomId");
-
-                    b.HasIndex("HotelId");
 
                     b.ToTable("Rooms");
                 });
@@ -390,19 +352,14 @@ namespace HMS.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("HMS.Data.Payment", b =>
+            modelBuilder.Entity("HMS.Data.Reservation", b =>
                 {
-                    b.HasOne("HMS.Data.Reservation", "Reservation")
-                        .WithMany()
-                        .HasForeignKey("ReservationId")
+                    b.HasOne("HMS.Data.Customer", "Customer")
+                        .WithMany("Reservations")
+                        .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Reservation");
-                });
-
-            modelBuilder.Entity("HMS.Data.Reservation", b =>
-                {
                     b.HasOne("HMS.Data.Room", "Room")
                         .WithMany()
                         .HasForeignKey("RoomId")
@@ -415,20 +372,11 @@ namespace HMS.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Customer");
+
                     b.Navigation("Room");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("HMS.Data.Room", b =>
-                {
-                    b.HasOne("HMS.Data.Hotel", "Hotel")
-                        .WithMany("Rooms")
-                        .HasForeignKey("HotelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Hotel");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -482,9 +430,9 @@ namespace HMS.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("HMS.Data.Hotel", b =>
+            modelBuilder.Entity("HMS.Data.Customer", b =>
                 {
-                    b.Navigation("Rooms");
+                    b.Navigation("Reservations");
                 });
 #pragma warning restore 612, 618
         }

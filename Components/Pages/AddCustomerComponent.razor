@@ -1,0 +1,84 @@
+﻿@page "/add-customer"
+@rendermode InteractiveServer
+@using HMS.Data
+@using HMS.Services
+@using Microsoft.AspNetCore.Authorization
+@inject ICustomerService customerService
+@inject NavigationManager navigation
+@attribute [Authorize]
+
+<h4 Class="text-center">Add Customer</h4>
+<hr />
+
+
+<button Class="ml-auto mt-3 btn btn-sm btn-link" @onclick="GoToList">Customer List</button>
+
+
+<EditForm EditContext="@editContext" OnValidSubmit="OnValidSubmit">
+    <DataAnnotationsValidator />
+    <div class="row">
+        <div class="col">
+            <InputText Placeholder="Customer Name" Class="form-control mt-3" @bind-Value="@model.Name" For="@(() => model.Name)" />
+            <ValidationMessage For="@(() => model.Name)" />
+
+            <label for="phoneNumber" class="mt-3">Phone Number</label>
+            <InputText @bind-Value="@model.PhoneNumber" id="phoneNumber" Class="form-control mt-3" />
+            <ValidationMessage For="@(() => model.PhoneNumber)" />
+                
+            <label for="email" class="mt-3">Email</label>
+            <InputText @bind-Value="@model.Email" id="email" Class="form-control mt-3" />
+            <ValidationMessage For="@(() => model.Email)" />
+                
+            <label for="address" class="mt-3">Address</label>
+            <InputTextArea @bind-Value="@model.Address" id="address" Class="form-control mt-3" />
+            <ValidationMessage For="@(() => model.Address)" />
+
+            @if (success)
+            {
+                <div class="text-success success-message">Customer added successfully!</div>
+            }
+
+            <button type="submit" Class="ml-auto mt-3 btn btn-sm btn-outline-primary">Add Customer</button>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    Customer model = new Customer();
+    EditContext editContext;
+    bool success;
+
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(model);
+
+        await base.OnInitializedAsync();
+    }
+
+    private async void OnValidSubmit(EditContext context)
+    {
+        success = false; // Reset success before each submission
+        var result = await customerService.AddCustomerAsync(model);
+        if (result != null)
+        {
+            success = true;
+            ResetForm(); // Reset the form
+        }
+
+        StateHasChanged();
+    }
+
+    private void GoToList()
+    {
+        navigation.NavigateTo("customers");
+    }
+
+    private async Task ResetForm()
+    {
+        model = new Customer();
+        editContext = new EditContext(model); // Create a new EditContext
+        await Task.Delay(3000); // Wait for 3 seconds
+        success = false; // Reset success after 3 seconds
+        StateHasChanged();
+    }
+}

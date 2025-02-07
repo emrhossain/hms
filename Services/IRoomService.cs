@@ -8,8 +8,8 @@ namespace HMS.Services
         Task<bool> DeleteRoomAsync(int id);
         Task<Room?> GetRoomByIdAsync(int id);
         Task<IEnumerable<Room>> GetAllRoomsAsync();
-        Task<IEnumerable<Room>> GetRoomsByHotelIdAsync(int hotelId);
         Task<bool> UpdateRoomAsync(Room room);
         Task<IEnumerable<Room>> SearchRoomsAsync(string roomNumber, string roomType);
+        Task<bool> UpdateStatus(int roomId, bool status);
     }
 }

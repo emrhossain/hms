@@ -9,6 +9,9 @@ namespace HMS.Services
         Task<bool> AddReservationAsync(Reservation reservation);
         Task<bool> UpdateReservationAsync(Reservation reservation);
         Task<bool> DeleteReservationAsync(int id);
-        Task<IEnumerable<Reservation>> SearchReservationAsync(string hotelName, string roomType);
+        Task<IEnumerable<Reservation>> SearchReservationAsync(string isPaid, string roomType);
+        Task<IEnumerable<Reservation>> GetReservationsByDateRange(DateTime fromDate, DateTime toDate, bool checkOutDate = false);
+        Task<bool> UpdatePaymentStatus(int reservationId, bool paid);
+
     }
 }

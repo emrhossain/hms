@@ -58,3 +58,48 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+div.sidebar {
+    background-image: linear-gradient(180deg, #000 0%, #555 70%) !important;
+}
+
+/* Sidebar Navigation */
+.navbar {
+    background-color: #1E1E2D; /* Dark background */
+    padding: 10px;
+}
+
+.nav-item {
+    display: block;
+    padding: 0;
+    padding-top: 10px;
+    border-radius: 5px;
+}
+
+    .nav-item:hover {
+        background-color: #3A3A4D; /* Dark hover effect */
+        transition: 0.3s ease-in-out;
+    }
+
+/* Custom Nav Link Styling */
+.custom-nav-link {
+    color: #ffffff !important; /* White text */
+    font-weight: bold;
+    text-transform: uppercase;
+    transition: color 0.3s;
+}
+
+    .custom-nav-link:hover {
+        color: #FFD700 !important; /* Gold color on hover */
+    }
+
+/*.sidebar-nav {
+    width: 250px;
+    height: 100vh;
+    background: linear-gradient(135deg, #1e1e2d, #28293d);
+}*/
+
+.bi-custom {
+    height: auto !important;
+    font-size: 20px;
+}

@@ -4,11 +4,11 @@
 @using HMS.Services
 @using Microsoft.AspNetCore.Authorization
 @inject IRoomService roomService
-@inject IHotelService hotelService
 @inject NavigationManager navigation
-@attribute [Authorize]
+@attribute [Authorize(Roles = "Administrator")]
 
-<h3 Class="text-center">Add Room</h3>
+<h4 Class="text-center">Add Room</h4>
+<hr/>
 
 <button Class="ml-auto mt-3 btn btn-sm btn-link" @onclick="GoToList">Room List</button>
 
@@ -16,26 +16,16 @@
     <DataAnnotationsValidator />
     <div class="row">
         <div class="col">
-            <label for="hotelSelect" class="mt-3">Select Hotel</label>
-            <select id="hotelSelect" class="form-control" @bind="model.HotelId">
-                <option value="">-- Select Hotel --</option>
-                @if (hotels != null)
-                {
-                    @foreach (var hotel in hotels)
-                    {
-                        <option value="@hotel.HotelId">@hotel.Name</option>
-                    }
-                }
-            </select>
-            <ValidationMessage For="@(() => model.HotelId)" />
-
             <label for="roomTypeSelect" class="mt-3">Room Type</label>
             <select id="roomTypeSelect" class="form-control" @bind="model.RoomType">
-                <option value="">-- Select Room Type --</option>
-                <option value="Single">Single</option>
-                <option value="Double">Double</option>
-                <option value="Suite">Suite</option>
-                <option value="Deluxe">Deluxe</option>
+                <option value="">-- Select Type --</option>
+                @if (roomTypes.Count > 0)
+                {
+                    @foreach (var roomType in roomTypes)
+                    {
+                        <option value="@roomType">@roomType</option>
+                    }
+                }
             </select>
             <ValidationMessage For="@(() => model.RoomType)" />
 
@@ -65,24 +55,14 @@
     Room model = new Room();
     EditContext editContext;
     bool success;
-    IEnumerable<Hotel> hotels = new List<Hotel>();
+    private List<RoomType> roomTypes = new List<RoomType>();
 
     protected override async Task OnInitializedAsync()
     {
         editContext = new EditContext(model);
-        await LoadHotelsAsync();
-    }
+        roomTypes = Enum.GetValues(typeof(RoomType)).Cast<RoomType>().ToList();
 
-    private async Task LoadHotelsAsync()
-    {
-        try
-        {
-            hotels = await hotelService.GetHotelsAsync();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error loading hotels: {ex.Message}");
-        }
+        await base.OnInitializedAsync();
     }
 
     private async void OnValidSubmit(EditContext context)

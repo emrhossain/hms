@@ -7,19 +7,14 @@ namespace HMS.Data
 {
     public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<ApplicationUser>(options)
     {
-        public DbSet<Hotel> Hotels { get; set; }
         public DbSet<Room> Rooms { get; set; }
         public DbSet<Reservation> Reservations { get; set; }
-        public DbSet<Payment> Payments { get; set; }
+        public DbSet<Customer> Customers { get; set; }
         public DbSet<Log_21180040> Log_21180040 { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
-
-            builder.Entity<Payment>()
-                .Property(p => p.AmountPaid)
-                .HasPrecision(18, 2); // 18 digits total, 2 decimal places
 
             builder.Entity<Reservation>()
                 .Property(r => r.TotalPrice)

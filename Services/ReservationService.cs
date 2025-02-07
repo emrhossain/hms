@@ -72,7 +72,6 @@ namespace HMS.Services
             {
                 return await _dbContext.Reservations
                                     .Include(r => r.Room)
-                                        .ThenInclude(room => room.Hotel) // Include Room's Hotel
                                     .Include(r => r.User)
                                     .ToListAsync();
             }
@@ -83,22 +82,70 @@ namespace HMS.Services
             }
         }
 
-        public async Task<IEnumerable<Reservation>> SearchReservationAsync(string hotelName, string roomType)
+        public async Task<IEnumerable<Reservation>> GetReservationsByDateRange(DateTime fromDate, DateTime toDate, bool checkOutDate = false)
+        {
+            try
+            {
+                var date1 = fromDate.Date;
+                var date2 = toDate.Date;
+
+                var query = _dbContext.Reservations
+                    .Include(r => r.Customer)
+                    .Include(r => r.Room)
+                    .AsQueryable();
+                if (checkOutDate)
+                {
+                    query = query.Where(r => r.CheckOutDate.Date >= date1 && r.CheckOutDate.Date <= date2);
+                }
+                else
+                {
+                    query = query.Where(r => r.CheckInDate.Date >= date1 && r.CheckInDate.Date <= date2);
+                }
+                return await query.ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching reservation");
+                return new List<Reservation>();
+            }
+        }
+
+        public async Task<IEnumerable<Reservation>> SearchReservationAsync(string isPaid, string roomType)
         {
             try
             {
                 return await _dbContext.Reservations
                     .Include(r => r.Room)
-                            .ThenInclude(room => room.Hotel) // Include Room's Hotel
-                    .Where(h =>
-                        EF.Functions.Like(h.Room.Hotel.Name, $"%{hotelName}%") &&
-                        EF.Functions.Like(h.Room.RoomType, $"%{roomType}%"))
+                    .Where(r =>
+                        (r.IsPaid == (isPaid == "1") || isPaid == "") &&
+                        EF.Functions.Like(r.Room.RoomType.ToString(), $"%{roomType}%"))
                     .ToListAsync();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error searching reservation");
                 return new List<Reservation>();
+            }
+        }
+
+        public async Task<bool> UpdatePaymentStatus(int reservationId, bool paid)
+        {
+            try
+            {
+                var reservation = _dbContext.Reservations.Find(reservationId);
+                if (reservation != null)
+                {
+                    reservation.IsPaid = paid;
+                    _dbContext.Reservations.Update(reservation);
+                    return await _dbContext.SaveChangesAsync() > 0;
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating payment status");
+                return false;
+
             }
         }
 

@@ -2,12 +2,15 @@
 @rendermode InteractiveServer
 @using HMS.Data
 @using HMS.Services
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.QuickGrid
 @using OfficeOpenXml
 @inject IRoomService roomService
 @inject NavigationManager navigation
 @inject IJSRuntime jsRuntime
 @inject ILogger<RoomComponent> logger
+@inject AuthenticationStateProvider authenticationStateProvider
+@attribute [Authorize]
 
 <h4 class="text-center">Rooms</h4>
 <hr />
@@ -24,7 +27,18 @@
         <InputText class="form-control" placeholder="Room Number" @bind-Value="searchRoomNumber" />
     </div>
     <div class="col-auto">
-        <InputText class="form-control" placeholder="Room Type" @bind-Value="searchRoomType" />
+        @* <InputSelect class="form-control" placeholder="Room Type" @bind-Value="searchRoomType" /> *@
+        <select id="roomType" class="form-control" @bind="searchRoomType">
+            <option value="">-- Select Type --</option>
+            @if (roomTypes.Count > 0)
+            {
+                <option value="">All</option>
+                @foreach (var roomType in roomTypes)
+                {
+                    <option value="@roomType">@roomType</option>
+                }
+            }
+        </select>
     </div>
     <div class="col-auto">
         <button class="btn btn-outline-primary mb-3" @onclick="SearchWithTerm">Search</button>
@@ -45,12 +59,14 @@ else
         <PropertyColumn Property="@(r => r.RoomNumber)" Title="Room Number" Sortable="true" />
         <PropertyColumn Property="@(r => r.RoomType)" Title="Room Type" Sortable="true" />
         <PropertyColumn Property="@(r => r.PricePerNight)" Title="Price/Night" Sortable="true" />
-        <PropertyColumn Property="@(r => r.IsAvailable)" Title="Available" Sortable="true" />
-        <PropertyColumn Property="@(r => r.Hotel.Name)" Title="Hotel" />
-        <TemplateColumn Title="Actions">
-            <button class="btn btn-sm btn-link" @onclick="@(() => EditRoom(context.RoomId))"><i class="bi bi-pencil"></i></button>
-            <button class="btn btn-sm btn-link" @onclick="@(() => DeleteRoom(context))"><i class="bi bi-trash"></i></button>
-        </TemplateColumn>
+        <PropertyColumn Property="@(r => r.IsAvailable ? "Available" : "Occupied")" Title="Status" Sortable="true" />
+        @if (IsAdmin)
+        {
+            <TemplateColumn Title="Actions">
+                <button class="btn btn-sm btn-link" @onclick="@(() => EditRoom(context.RoomId))"><i class="bi bi-pencil"></i></button>
+                <button class="btn btn-sm btn-link" @onclick="@(() => DeleteRoom(context))"><i class="bi bi-trash"></i></button>
+            </TemplateColumn>
+        }
     </QuickGrid>
     <Paginator State="pagination" />
 }
@@ -58,7 +74,9 @@ else
 @code {
     private string searchRoomNumber = string.Empty;
     private string searchRoomType = string.Empty;
+    private List<RoomType> roomTypes = new List<RoomType>();
     private IQueryable<Room>? rooms;
+    private bool IsAdmin;
 
     PaginationState pagination = new PaginationState { ItemsPerPage = 10 };
 
@@ -66,7 +84,12 @@ else
     {
         try
         {
+            var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            IsAdmin = user.IsInRole("Administrator");
+
             await LoadRoomsAsync();
+            roomTypes = Enum.GetValues(typeof(RoomType)).Cast<RoomType>().ToList();
         }
         catch (Exception ex)
         {
@@ -91,7 +114,7 @@ else
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(searchRoomNumber) && string.IsNullOrWhiteSpace(searchRoomType))
+            if (string.IsNullOrWhiteSpace(searchRoomNumber) && (string.IsNullOrEmpty(searchRoomType) || searchRoomType == "All"))
             {
                 await LoadRoomsAsync();
             }
@@ -125,8 +148,7 @@ else
             worksheet.Cells[1, 2].Value = "Room Number";
             worksheet.Cells[1, 3].Value = "Room Type";
             worksheet.Cells[1, 4].Value = "Price Per Night";
-            worksheet.Cells[1, 5].Value = "Available";
-            worksheet.Cells[1, 6].Value = "Hotel";
+            worksheet.Cells[1, 5].Value = "Status";
 
             // Populate data
             var roomList = rooms.ToList();
@@ -137,8 +159,7 @@ else
                 worksheet.Cells[row, 2].Value = roomList[i].RoomNumber;
                 worksheet.Cells[row, 3].Value = roomList[i].RoomType;
                 worksheet.Cells[row, 4].Value = roomList[i].PricePerNight;
-                worksheet.Cells[row, 5].Value = roomList[i].IsAvailable ? "Yes" : "No";
-                worksheet.Cells[row, 6].Value = roomList[i].Hotel?.Name ?? "N/A";
+                worksheet.Cells[row, 5].Value = roomList[i].IsAvailable ? "Available" : "Occupied";
             }
 
             // Convert to bytes and trigger download
@@ -174,7 +195,7 @@ else
                 await roomService.DeleteRoomAsync(room.RoomId);
                 await LoadRoomsAsync();
                 StateHasChanged(); // Refresh the UI.
-                logger.LogError($"Deleted room: {room.RoomNumber}");
+                logger.LogInformation($"Deleted room: {room.RoomNumber}");
             }
         }
         catch (Exception ex)

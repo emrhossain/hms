@@ -1,0 +1,113 @@
+﻿@page "/customer-reservation-report"
+@rendermode InteractiveServer
+@using HMS.Data
+@using HMS.Services
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using OfficeOpenXml
+@inject IReservationService reservationService
+@inject IJSRuntime jsRuntime
+@inject ILogger<CustomerReportComponent> logger
+@attribute [Authorize]
+
+<h4 class="text-center">Customer Reservation Report</h4>
+<hr />
+
+<div class="d-flex gap-2 mb-3">
+    <InputDate @bind-Value="fromDate" />
+    <InputDate @bind-Value="toDate" />
+    <button class="btn btn-sm btn-info" @onclick="LoadCustomerReservations">Generate Report</button>
+</div>
+<div class="row mb-3">
+    <div class="col">
+        <button class="btn btn-sm btn-outline-success" @onclick="ExportToExcel">Export</button>
+    </div>
+</div>
+
+<QuickGrid Items="customerReservations.AsQueryable()" Pagination="pagination" Class="table table-bordered table-striped">
+    <PropertyColumn Property="@(r => r.CustomerName)" Title="Customer Name" Sortable="true" />
+    <PropertyColumn Property="@(r => r.Mobile)" Title="Mobile" Sortable="true" />
+    <PropertyColumn Property="@(r => r.ReservationCount)" Title="Reservation Count" Sortable="true" />
+    <PropertyColumn Property="@(r => r.TotalAmount)" Title="Total Amount" Sortable="true" />
+    <PropertyColumn Property="@(r => r.PaidAmount)" Title="Paid Amount" Sortable="true" />
+    <PropertyColumn Property="@(r => r.DueAmount)" Title="Due Amount" Sortable="true" />
+</QuickGrid>
+
+<Paginator State="pagination" />
+
+@code {
+    private DateTime fromDate = DateTime.Now.AddMonths(-1);
+    private DateTime toDate = DateTime.Now;
+    private List<CustomerReservationReportDto> customerReservations = new();
+    PaginationState pagination = new PaginationState { ItemsPerPage = 10 };
+
+    private async Task LoadCustomerReservations()
+    {
+        var reservations = await reservationService.GetReservationsByDateRange(fromDate, toDate, false);
+
+        customerReservations = reservations
+            .GroupBy(r => new { r.CustomerId, r.Customer.Name, r.Customer.PhoneNumber })
+            .Select(g => new CustomerReservationReportDto
+                {
+                    CustomerName = g.Key.Name,
+                    Mobile = g.Key.PhoneNumber,
+                    ReservationCount = g.Count(),
+                    TotalAmount = g.Sum(r => r.TotalPrice),
+                    PaidAmount = g.Where(r => r.IsPaid).Sum(r => r.TotalPrice),
+                    DueAmount = g.Where(r => !r.IsPaid).Sum(r => r.TotalPrice)
+                }).ToList();
+    }
+
+    private async Task ExportToExcel()
+    {
+        try
+        {
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+            using var package = new ExcelPackage();
+            var worksheet = package.Workbook.Worksheets.Add("CustomerReservationReport");
+
+            // Add headers
+            worksheet.Cells[1, 1].Value = "SL";
+            worksheet.Cells[1, 2].Value = "Customer Name";
+            worksheet.Cells[1, 3].Value = "Mobile";
+            worksheet.Cells[1, 4].Value = "Reservation Count";
+            worksheet.Cells[1, 5].Value = "Total Amount";
+            worksheet.Cells[1, 6].Value = "Paid Amount";
+            worksheet.Cells[1, 7].Value = "Due Amount";
+
+            // Populate data
+            for (int i = 0; i < customerReservations.Count; i++)
+            {
+                worksheet.Cells[i + 2, 1].Value = (i + 1);
+                worksheet.Cells[i + 2, 2].Value = customerReservations[i].CustomerName;
+                worksheet.Cells[i + 2, 3].Value = customerReservations[i].Mobile;
+                worksheet.Cells[i + 2, 4].Value = customerReservations[i].ReservationCount;
+                worksheet.Cells[i + 2, 5].Value = customerReservations[i].TotalAmount;
+                worksheet.Cells[i + 2, 6].Value = customerReservations[i].PaidAmount;
+                worksheet.Cells[i + 2, 7].Value = customerReservations[i].DueAmount;
+            }
+
+            // Convert to bytes and trigger download
+            var excelBytes = package.GetAsByteArray();
+            var fileName = "CustomerReservationReport.xlsx";
+            await using var stream = new MemoryStream(excelBytes);
+            using var streamRef = new Microsoft.JSInterop.DotNetStreamReference(stream);
+
+            await jsRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Error exporting customer reservation report: {ex.Message}");
+        }
+    }
+
+    private class CustomerReservationReportDto
+    {
+        public string CustomerName { get; set; }
+        public string Mobile { get; set; }
+        public int ReservationCount { get; set; }
+        public decimal TotalAmount { get; set; }
+        public decimal PaidAmount { get; set; }
+        public decimal DueAmount { get; set; }
+    }
+}

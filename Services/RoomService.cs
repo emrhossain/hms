@@ -6,11 +6,11 @@ namespace HMS.Services
     public class RoomService : IRoomService
     {
         private readonly ApplicationDbContext _dbContext;
-        private readonly ILogger<HotelService> Logger;
+        private readonly ILogger<RoomService> _logger;
 
-        public RoomService(ILogger<HotelService> logger, ApplicationDbContext dbContext)
+        public RoomService(ILogger<RoomService> logger, ApplicationDbContext dbContext)
         {
-            Logger = logger;
+            _logger = logger;
             _dbContext = dbContext;
         }
 
@@ -25,7 +25,7 @@ namespace HMS.Services
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error adding room");
+                _logger.LogError(ex, "Error adding room");
                 return null;
             }
         }
@@ -42,7 +42,7 @@ namespace HMS.Services
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error deleting room");
+                _logger.LogError(ex, "Error deleting room");
                 return false;
             }
         }
@@ -52,12 +52,11 @@ namespace HMS.Services
             try
             {
                 return await _dbContext.Rooms
-                            .Include(r => r.Hotel) // Include related Hotel data
                             .FirstOrDefaultAsync(r => r.RoomId == id);
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, $"Error getting room with id: {id}");
+                _logger.LogError(ex, $"Error getting room with id: {id}");
                 return null;
             }
         }
@@ -67,28 +66,11 @@ namespace HMS.Services
             try
             {
                 return await _dbContext.Rooms
-                .Include(r => r.Hotel) // Include related Hotel data
                 .ToListAsync();
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error getting room list");
-                return new List<Room>();
-            }
-        }
-
-        public async Task<IEnumerable<Room>> GetRoomsByHotelIdAsync(int hotelId)
-        {
-            try
-            {
-                return await _dbContext.Rooms
-                                    .Include(r => r.Hotel) // Include related Hotel data
-                                    .Where(r => r.HotelId == hotelId)
-                                    .ToListAsync();
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, $"Error getting rooms for hotel with id: {hotelId}");
+                _logger.LogError(ex, "Error getting room list");
                 return new List<Room>();
             }
         }
@@ -98,15 +80,14 @@ namespace HMS.Services
             try
             {
                 return await _dbContext.Rooms
-                    .Include(r => r.Hotel) // Include related Hotel data
                     .Where(h =>
                         EF.Functions.Like(h.RoomNumber, $"%{roomNumber}%") &&
-                        EF.Functions.Like(h.RoomType, $"%{roomType}%"))
+                        (h.RoomType.ToString() == roomType || roomType == string.Empty))
                     .ToListAsync();
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error searching rooms");
+                _logger.LogError(ex, "Error searching rooms");
                 return new List<Room>();
             }
         }
@@ -118,7 +99,6 @@ namespace HMS.Services
                 var existingRoom = await _dbContext.Rooms.FindAsync(room.RoomId);
                 if (existingRoom == null) return false;
 
-                existingRoom.HotelId = room.HotelId;
                 existingRoom.RoomNumber = room.RoomNumber;
                 existingRoom.RoomType = room.RoomType;
                 existingRoom.PricePerNight = room.PricePerNight;
@@ -131,7 +111,30 @@ namespace HMS.Services
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error updating room");
+                _logger.LogError(ex, "Error updating room");
+                return false;
+            }
+        }
+
+        public async Task<bool> UpdateStatus(int roomId, bool status)
+        {
+            try
+            {
+                var room = await _dbContext.Rooms.FindAsync(roomId);
+                if (room == null)
+                {
+                    return false;
+                }
+
+                room.IsAvailable = status;
+                _dbContext.Rooms.Update(room);
+                await _dbContext.SaveChangesAsync();
+                return true;
+
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Error updating status");
                 return false;
             }
         }

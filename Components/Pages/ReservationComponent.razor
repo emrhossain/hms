@@ -6,6 +6,7 @@
 @using OfficeOpenXml
 @rendermode InteractiveServer
 @inject IReservationService reservationService
+@inject IRoomService roomService
 @inject NavigationManager navigation
 @inject IJSRuntime jsRuntime
 @inject ILogger<ReservationComponent> logger
@@ -23,10 +24,23 @@
 
 <div Class="row mb-3">
     <div class="col-auto">
-        <InputText class="form-control" Placeholder="Hotel" @bind-Value="searchHotel" />
+        <select id="roomTypeSelect" class="form-control" @bind="searchRoomType">
+            <option value="">-- Room Type --</option>
+            @if (roomTypes.Count > 0)
+            {
+                @foreach (var roomType in roomTypes)
+                {
+                    <option value="@roomType">@roomType</option>
+                }
+            }
+        </select>
     </div>
     <div class="col-auto">
-        <InputText class="form-control" Placeholder="Room Type" @bind-Value="searchRoom" />
+        <select class="form-control" @bind="searchPaid">
+            <option value="">-- Paid/Unpaid --</option>
+            <option value="1">Paid</option>
+            <option value="0">Unpaid</option>
+        </select>
     </div>
     <div class="col-auto">
         <button class="btn btn-outline-primary mb-3" @onclick="SearchWithTerm">Search</button>
@@ -45,14 +59,18 @@ else
 {
     <QuickGrid Items="reservations" Pagination="pagination" Class="table table-responsive table-bordered table-striped">
         <PropertyColumn Property="@(p => p.User.Email)" Sortable="true" Title="User" />
-        <PropertyColumn Property="@(p => p.Room.Hotel.Name)" Sortable="true" Title="Hotel" />
         <PropertyColumn Property="@(p => p.Room.RoomNumber)" Sortable="true" Title="Room" />
         <PropertyColumn Property="@(p => p.Room.RoomType)" Sortable="true" Title="Type" />
         <PropertyColumn Property="@(p => p.CheckInDate.ToString("yyyy-MM-dd"))" Sortable="true" Title="Check In" />
         <PropertyColumn Property="@(p => p.CheckOutDate.ToString("yyyy-MM-dd"))" Sortable="true" Title="Check Out" />
         <PropertyColumn Property="@(p => p.TotalPrice)" Sortable="true" Align="Align.Right" Title="Total" />
+        <PropertyColumn Property="@(p => p.IsPaid ? "Paid" : "Unpaid")" Sortable="true" Align="Align.Right" Title="Payment" />
         <TemplateColumn Title="Actions">
             <button class="btn btn-sm btn-link" @onclick="@(() => EditReservation(context.ReservationId))"><i class="bi bi-pencil"></i></button>
+            @if (!context.IsPaid)
+            {
+                <button class="btn btn-sm btn-link" @onclick="@(() => ChangePaymentStatus(context.ReservationId, true))">Pay</button>
+            }
             <button class="btn btn-sm btn-link" @onclick="@(() => DeleteReservation(context))"><i class="bi bi-trash"></i></button>
         </TemplateColumn>
     </QuickGrid>
@@ -62,12 +80,14 @@ else
 @code {
     private IQueryable<Reservation> reservations;
     PaginationState pagination = new PaginationState { ItemsPerPage = 10 };
-    private string searchHotel = string.Empty;
-    private string searchRoom = string.Empty;
+    private string searchPaid = string.Empty;
+    private string searchRoomType = string.Empty;
+    private List<RoomType> roomTypes = new List<RoomType>();
 
     protected override async Task OnInitializedAsync()
     {
         await LoadReservation();
+        roomTypes = Enum.GetValues(typeof(RoomType)).Cast<RoomType>().ToList();
     }
 
     private async Task LoadReservation()
@@ -99,12 +119,12 @@ else
             // Add headers
             worksheet.Cells[1, 1].Value = "SL";
             worksheet.Cells[1, 2].Value = "User";
-            worksheet.Cells[1, 3].Value = "Hotel";
-            worksheet.Cells[1, 4].Value = "Room";
-            worksheet.Cells[1, 5].Value = "Type";
-            worksheet.Cells[1, 6].Value = "Check-In Date";
-            worksheet.Cells[1, 7].Value = "Check-Out Date";
-            worksheet.Cells[1, 8].Value = "Total Price";
+            worksheet.Cells[1, 3].Value = "Room";
+            worksheet.Cells[1, 4].Value = "Type";
+            worksheet.Cells[1, 5].Value = "Check-In Date";
+            worksheet.Cells[1, 6].Value = "Check-Out Date";
+            worksheet.Cells[1, 7].Value = "Total Price";
+            worksheet.Cells[1, 8].Value = "Payment Status";
 
             // Populate data
             var reservationList = reservations.ToList();
@@ -112,12 +132,12 @@ else
             {
                 worksheet.Cells[i + 2, 1].Value = (i + 1);
                 worksheet.Cells[i + 2, 2].Value = reservationList[i].User?.Email;
-                worksheet.Cells[i + 2, 3].Value = reservationList[i].Room?.Hotel.Name;
-                worksheet.Cells[i + 2, 4].Value = reservationList[i].Room?.RoomNumber;
-                worksheet.Cells[i + 2, 5].Value = reservationList[i].Room?.RoomType;
-                worksheet.Cells[i + 2, 6].Value = reservationList[i].CheckInDate.ToString("yyyy-MM-dd");
-                worksheet.Cells[i + 2, 7].Value = reservationList[i].CheckOutDate.ToString("yyyy-MM-dd");
-                worksheet.Cells[i + 2, 8].Value = reservationList[i].TotalPrice;
+                worksheet.Cells[i + 2, 3].Value = reservationList[i].Room?.RoomNumber;
+                worksheet.Cells[i + 2, 4].Value = reservationList[i].Room?.RoomType;
+                worksheet.Cells[i + 2, 5].Value = reservationList[i].CheckInDate.ToString("yyyy-MM-dd");
+                worksheet.Cells[i + 2, 6].Value = reservationList[i].CheckOutDate.ToString("yyyy-MM-dd");
+                worksheet.Cells[i + 2, 7].Value = reservationList[i].TotalPrice;
+                worksheet.Cells[i + 2, 8].Value = reservationList[i].IsPaid ? "Paid" : "Unpaid";
             }
 
             // Convert to bytes and trigger download
@@ -133,7 +153,7 @@ else
         {
             logger.LogError($"Error exporting reservations: {ex.Message}");
         }
-        
+
     }
 
     private void EditReservation(int id)
@@ -150,6 +170,7 @@ else
             {
                 if (await reservationService.DeleteReservationAsync(reservation.ReservationId))
                 {
+                    await roomService.UpdateStatus(reservation.RoomId, true);
                     var result = await reservationService.GetReservationsAsync();
                     reservations = result.AsQueryable();
                     StateHasChanged();
@@ -166,19 +187,39 @@ else
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(searchHotel) && string.IsNullOrWhiteSpace(searchRoom))
+            if (string.IsNullOrWhiteSpace(searchPaid) && string.IsNullOrWhiteSpace(searchRoomType))
             {
                 await LoadReservation();
             }
             else
             {
-                var filteredReservations = await reservationService.SearchReservationAsync(searchHotel, searchRoom);
+                var filteredReservations = await reservationService.SearchReservationAsync(searchPaid, searchRoomType);
                 reservations = filteredReservations.AsQueryable();
             }
         }
         catch (Exception ex)
         {
             logger.LogError($"Error during search: {ex.Message}");
+        }
+    }
+    private async Task ChangePaymentStatus(int reservationId, bool status)
+    {
+        try
+        {
+            if (await reservationService.UpdatePaymentStatus(reservationId, status))
+            {
+                // messsage
+                await LoadReservation();
+                await jsRuntime.InvokeAsync<bool>("alert", new object[] { $"Payment updated" });
+            }
+            else
+            {
+                // message
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Error during payment updation: {ex.Message}");
         }
     }
 }
