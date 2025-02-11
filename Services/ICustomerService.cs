@@ -10,5 +10,6 @@ namespace HMS.Services
         Task<bool> UpdateCustomerAsync(Customer customer);
         Task<bool> DeleteCustomerAsync(int id);
         Task<IEnumerable<Customer>> SearchCustomersAsync(string cusomterName, string phoneNumber);
+        Task<bool> CheckPhoneNumber(string phoneNumber);
     }
 }

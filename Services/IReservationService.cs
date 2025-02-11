@@ -12,6 +12,7 @@ namespace HMS.Services
         Task<IEnumerable<Reservation>> SearchReservationAsync(string isPaid, string roomType);
         Task<IEnumerable<Reservation>> GetReservationsByDateRange(DateTime fromDate, DateTime toDate, bool checkOutDate = false);
         Task<bool> UpdatePaymentStatus(int reservationId, bool paid);
+        Task<bool> CheckOut(int reservationId);
 
     }
 }

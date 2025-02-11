@@ -66,12 +66,19 @@ else
         <PropertyColumn Property="@(p => p.TotalPrice)" Sortable="true" Align="Align.Right" Title="Total" />
         <PropertyColumn Property="@(p => p.IsPaid ? "Paid" : "Unpaid")" Sortable="true" Align="Align.Right" Title="Payment" />
         <TemplateColumn Title="Actions">
-            <button class="btn btn-sm btn-link" @onclick="@(() => EditReservation(context.ReservationId))"><i class="bi bi-pencil"></i></button>
+
             @if (!context.IsPaid)
             {
                 <button class="btn btn-sm btn-link" @onclick="@(() => ChangePaymentStatus(context.ReservationId, true))">Pay</button>
             }
-            <button class="btn btn-sm btn-link" @onclick="@(() => DeleteReservation(context))"><i class="bi bi-trash"></i></button>
+            @if (!context.CheckedOut)
+            {
+                <button class="btn btn-sm btn-link" @onclick="@(() => CheckOut(context))">Checkout</button>
+
+                <button class="btn btn-sm btn-link" @onclick="@(() => EditReservation(context.ReservationId))"><i class="bi bi-pencil"></i></button>
+
+                <button class="btn btn-sm btn-link" @onclick="@(() => DeleteReservation(context))"><i class="bi bi-trash"></i></button>
+            }
         </TemplateColumn>
     </QuickGrid>
     <Paginator State="pagination" />
@@ -202,6 +209,7 @@ else
             logger.LogError($"Error during search: {ex.Message}");
         }
     }
+
     private async Task ChangePaymentStatus(int reservationId, bool status)
     {
         try
@@ -220,6 +228,32 @@ else
         catch (Exception ex)
         {
             logger.LogError($"Error during payment updation: {ex.Message}");
+        }
+    }
+
+    private async Task CheckOut(Reservation reservation)
+    {
+        try
+        {
+            if (!reservation.IsPaid)
+            {
+                await jsRuntime.InvokeAsync<bool>("alert", new object[] { $"Pay first" });
+                return;
+            }
+            if (await reservationService.CheckOut(reservation.ReservationId))
+            {
+                // messsage
+                await LoadReservation();
+                await jsRuntime.InvokeAsync<bool>("alert", new object[] { $"Checked out successfully" });
+            }
+            else
+            {
+                // message
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Error during checking out: {ex.Message}");
         }
     }
 }

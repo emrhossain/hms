@@ -9,6 +9,10 @@
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["HMS.styles.css"]" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" rel="stylesheet" />
+
     <ImportMap />
     <link rel="icon" type="image/png" href="favicon.png" />
     <HeadOutlet />
@@ -18,6 +22,31 @@
     <Routes />
     <script src="_framework/blazor.web.js"></script>
     <script src="js/site.js"></script>
+
+    <!-- jQuery & Select2 JS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
+
+    <script>
+        window.initSelect2 = (id) => {
+            $(id).select2({
+                width: '100%',
+                placeholder: "-- Search --"
+            }).on('change', function (e) {
+                // Dispatch a native change event that Blazor will pick up.
+                var event = new Event('change', { bubbles: true });
+                e.target.dispatchEvent(event);
+            });
+        };
+
+        // window.setSelect2Value = (id, value) => {
+        //     $(id).val(value).trigger('change');
+        // };
+
+        // window.getSelect2Value = (id) => {
+        //     return $(id).val();
+        // };
+    </script>
 </body>
 
 </html>

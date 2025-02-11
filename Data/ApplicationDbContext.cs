@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using System.Reflection.Emit;
 
 namespace HMS.Data
 {
@@ -15,6 +16,10 @@ namespace HMS.Data
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            builder.Entity<Customer>()
+                .HasIndex(c => c.PhoneNumber)
+                .IsUnique();
 
             builder.Entity<Reservation>()
                 .Property(r => r.TotalPrice)

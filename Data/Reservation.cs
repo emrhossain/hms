@@ -18,6 +18,7 @@ namespace HMS.Data
         public decimal TotalPrice { get; set; }
         public DateTime LastModified_21180040 { get; set; } = DateTime.Now;
         public bool IsPaid { get; set; }
+        public bool CheckedOut { get; set; } = false;
         public ApplicationUser User { get; set; }
         public Room Room { get; set; }
         public Customer Customer { get; set; }

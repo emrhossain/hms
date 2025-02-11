@@ -31,6 +31,32 @@ namespace HMS.Services
             }
         }
 
+        public async Task<bool> CheckOut(int reservationId)
+        {
+            try
+            {
+                var reservation = _dbContext.Reservations.Find(reservationId);
+                if (reservation != null)
+                {
+                    reservation.CheckedOut = true;
+                    _dbContext.Reservations.Update(reservation);
+                    var room = _dbContext.Rooms.Find(reservation.RoomId);
+                    if (room != null)
+                    {
+                        room.IsAvailable = true;
+                        _dbContext.Rooms.Update(room);
+                    }
+                    return await _dbContext.SaveChangesAsync() > 0;
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking out reservation");
+                return false;
+            }
+        }
+
         public async Task<bool> DeleteReservationAsync(int id)
         {
             try

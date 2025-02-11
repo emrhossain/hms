@@ -81,10 +81,23 @@ namespace HMS.Services
                         EF.Functions.Like(c.PhoneNumber, $"%{phoneNumber}%"))
                         .ToListAsync();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Error searching customer");
                 return new List<Customer>();
+            }
+        }
+
+        public async Task<bool> CheckPhoneNumber(string phoneNumber)
+        {
+            try
+            {
+                return await _context.Customers.AnyAsync(c => c.PhoneNumber == phoneNumber);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking phone number");
+                return false;
             }
         }
     }

@@ -6,6 +6,7 @@
 @inject IRoomService roomService
 @inject ICustomerService customerService
 @inject NavigationManager navigation
+@inject IJSRuntime jsRuntime
 
 <h4 Class="text-center">Edit Reservation</h4>
 <hr />
@@ -17,7 +18,7 @@
     <ValidationSummary />
     <div class="form-group">
         <label>Customer</label>
-        <InputSelect TValue="int" Value="@reservation.CustomerId" ValueExpression="() => reservation.CustomerId" ValueChanged="OnCustomerChange" class="form-control">
+        <InputSelect TValue="int" Value="@reservation.CustomerId" ValueExpression="() => reservation.CustomerId" ValueChanged="OnCustomerChange" class="form-control selectsearch">
             <option value="">Select a Customer</option>
             <option value="-1">Add New Customer</option>
             @foreach (var customer in customers)
@@ -46,12 +47,16 @@
                 <label>Address</label>
                 <InputText @bind-Value="newCustomer.Address" class="form-control" />
             </div>
+            @if (customerMessage != string.Empty)
+            {
+                <div class="text-danger">@customerMessage</div>
+            }
             <button type="button" class="btn btn-sm btn-success mt-2" @onclick="SaveNewCustomer">Save Customer</button>
         </div>
     }
     <div class="form-group">
         <label>Room</label>
-        <InputSelect TValue="int" Value="@reservation.RoomId" ValueExpression="() => reservation.RoomId" class="form-control" ValueChanged="OnRoomChange">
+        <InputSelect TValue="int" Value="@reservation.RoomId" ValueExpression="() => reservation.RoomId" class="form-control selectsearch" ValueChanged="OnRoomChange">
             <option value="">Select a Room</option>
             @foreach (var room in rooms)
             {
@@ -91,6 +96,7 @@
     private int oldRoomId;
     bool success;
     private string message = string.Empty;
+    private string customerMessage = string.Empty;
 
     private List<Customer> customers = new();
     private bool isAddingNewCustomer = false;
@@ -118,6 +124,14 @@
             {
                 GoToList();
             }
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await jsRuntime.InvokeVoidAsync("initSelect2", ".selectsearch");
         }
     }
 
@@ -202,6 +216,7 @@
 
     private async Task OnCustomerChange(int selectedCustomerId)
     {
+        reservation.CustomerId = selectedCustomerId;
         if (selectedCustomerId == -1) // New Customer Option Selected
         {
             isAddingNewCustomer = true;
@@ -210,12 +225,17 @@
         else
         {
             isAddingNewCustomer = false;
-            reservation.CustomerId = selectedCustomerId;
         }
     }
 
     private async Task SaveNewCustomer()
     {
+        customerMessage = string.Empty;
+        if (await customerService.CheckPhoneNumber(newCustomer.PhoneNumber))
+        {
+            customerMessage = "Phone number already exists";
+            return;
+        }
         var savedCustomer = await customerService.AddCustomerAsync(newCustomer);
         if (savedCustomer != null)
         {

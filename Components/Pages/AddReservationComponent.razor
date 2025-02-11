@@ -9,6 +9,7 @@
 @inject ICustomerService customerService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager navigation
+@inject IJSRuntime jsRuntime
 @attribute [Authorize]
 
 <h3 Class="text-center">Add Reservation</h3>
@@ -21,7 +22,7 @@
 
     <div class="form-group">
         <label>Customer</label>
-        <InputSelect TValue="int" Value="@reservation.CustomerId" ValueExpression="() => reservation.CustomerId" ValueChanged="OnCustomerChange" class="form-control">
+        <InputSelect TValue="int" Value="@reservation.CustomerId" ValueExpression="() => reservation.CustomerId" ValueChanged="OnCustomerChange" class="form-control selectsearch">
             <option value="">Select a Customer</option>
             <option value="-1">Add New Customer</option>
             @foreach (var customer in customers)
@@ -50,12 +51,16 @@
                 <label>Address</label>
                 <InputText @bind-Value="newCustomer.Address" class="form-control" />
             </div>
+            @if (customerMessage != string.Empty)
+            {
+                <div class="text-danger">@customerMessage</div>
+            }
             <button type="button" class="btn btn-sm btn-success mt-2" @onclick="SaveNewCustomer">Save Customer</button>
         </div>
     }
     <div class="form-group">
         <label>Room</label>
-        <InputSelect TValue="int" Value="@reservation.RoomId" ValueExpression="() => reservation.RoomId" class="form-control" ValueChanged="OnRoomChange">
+        <InputSelect TValue="int" Value="@reservation.RoomId" ValueExpression="() => reservation.RoomId" class="form-control selectsearch" ValueChanged="OnRoomChange">
             <option value="">Select a Room</option>
             @foreach (var room in rooms)
             {
@@ -95,6 +100,7 @@
     private string userId;
     private bool success;
     private string message = string.Empty;
+    private string customerMessage = string.Empty;
 
     private List<Customer> customers = new();
     private bool isAddingNewCustomer = false;
@@ -106,6 +112,14 @@
         customers = await customerService.GetCustomersAsync();
         rooms = await roomService.GetAllRoomsAsync();
         await SetLoggedInUser();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await jsRuntime.InvokeVoidAsync("initSelect2", ".selectsearch");
+        }
     }
 
     private async Task SetLoggedInUser()
@@ -198,6 +212,7 @@
 
     private async Task OnCustomerChange(int selectedCustomerId)
     {
+        reservation.CustomerId = selectedCustomerId;
         if (selectedCustomerId == -1) // New Customer Option Selected
         {
             isAddingNewCustomer = true;
@@ -206,12 +221,17 @@
         else
         {
             isAddingNewCustomer = false;
-            reservation.CustomerId = selectedCustomerId;
         }
     }
 
     private async Task SaveNewCustomer()
     {
+        customerMessage = string.Empty;
+        if (await customerService.CheckPhoneNumber(newCustomer.PhoneNumber))
+        {
+            customerMessage = "Phone number already exists";
+            return;
+        }
         var savedCustomer = await customerService.AddCustomerAsync(newCustomer);
         if (savedCustomer != null)
         {

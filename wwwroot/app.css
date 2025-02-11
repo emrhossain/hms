@@ -103,3 +103,10 @@ div.sidebar {
     height: auto !important;
     font-size: 20px;
 }
+
+.select2-hidden-accessible {
+    display: none !important;
+}
+select[aria-hidden="true"] {
+    display: none !important;
+}
